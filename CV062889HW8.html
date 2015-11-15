@@ -1,0 +1,3047 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Forecast Search</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="/js/bootstrap.min.js"></script>
+    <script src="http://code.jquery.com/jquery-2.1.1.min.js"></script>
+    <script src="js/jquery.validate.js"></script>
+    <script type="text/javascript" src="leaflet.js"></script>
+    <link rel="stylesheet" type="text/css" href="leaflet.css" />
+
+
+    <script src="http://openlayers.org/api/OpenLayers.js"></script>
+    <style>
+        .error {
+            color: red;
+        }
+
+        .breakword {
+            word-wrap: break-word;
+        }
+
+        .info-panel {
+            padding: 4px;
+        }
+
+        .navbar-collapse.in {
+            overflow-y: visible;
+        }
+
+        .hours {
+            background-color: white;
+            border-bottom: 1px solid;
+            border-bottom-color: rgb(232, 232, 232);
+        }
+
+        .weekrowcolor {
+            background-color: rgb(47, 52, 57);
+        }
+
+        .nextday {
+            padding-top: 5px;
+            padding-bottom: :10px;
+        }
+
+        .oddRowColor {
+            padding-top: 5px;
+            padding-bottom: 5px;
+            background-color: rgba(250, 250, 250,1.0);
+        }
+
+        .evenRowColor {
+            padding-top: 5px;
+            padding-bottom: 5px;
+            background-color: rgba(241, 221, 221,1.0);
+        }
+
+        sup {
+            vertical-align: super;
+            font-size: 15pt;
+            position: relative;
+            top: -0.5em;
+        }
+
+        td.CellOne {
+            background-color: rgba(242, 126, 127, 1);
+            display: block;
+        }
+
+        .Imagebackground {
+            background-color: rgba(242, 126, 127, 1);
+        }
+
+        #DataTab li a {
+            color: rgb(47, 112, 168);
+            background-color: rgb(238, 238, 238);
+            border-color: rgb(238, 238, 238);
+        }
+
+        #DataTab li.active a {
+            border-color: rgb(238, 238, 238);
+            border-bottom-color: transparent;
+            color: rgb(238, 238, 238);
+            background-color: rgb(47, 112, 168);
+        }
+
+        .dashboard-panel-2 {
+            padding-left: 0px;
+            padding-right: 5px;
+        }
+
+        .lower-right-button {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+        }
+
+        #textcolor {
+            color: white;
+        }
+
+        #asterickcolor {
+            color: red;
+        }
+
+        .my-error-class {
+            color: #A40000;
+        }
+
+        #logo {
+            position: absolute;
+            float: right;
+        }
+
+
+        body {
+            background-image: url(bg.jpg);
+            background-repeat: no-repeat;
+            background-position: center;
+            background-attachment: fixed;
+            -webkit-background-size: cover;
+            -moz-background-size: cover;
+            -o-background-size: cover;
+            background-size: cover;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <script>
+
+        var count = 0;
+        window.fbAsyncInit = function () {
+            FB.init({
+                appId: '904923266258509',
+                xfbml: true,
+                version: 'v2.5'
+            });
+        };
+
+        (function (d, s, id) {
+            var js, fjs = d.getElementsByTagName(s)[0];
+            if (d.getElementById(id)) { return; }
+            js = d.createElement(s); js.id = id;
+            js.src = "//connect.facebook.net/en_US/sdk.js";
+            fjs.parentNode.insertBefore(js, fjs);
+        }(document, 'script', 'facebook-jssdk'));
+
+
+        var w = 0;
+        var h = 0;
+        var validator;
+        var lat = 0, long = 0;
+
+
+
+        function map() {
+
+            var map = document.getElementById("mymap");
+            var width = document.getElementById("mymap").width;
+            var d = document.getElementById("mymap");
+            $('#mymap').empty();
+            map = new OpenLayers.Map("mymap");
+
+            map.addLayer(new OpenLayers.Layer.OSM());
+            var lonLat = new OpenLayers.LonLat(long, lat)
+                  .transform(
+                    new OpenLayers.Projection("EPSG:4326"),
+                    map.getProjectionObject()
+                  );
+
+            var zoom = 8;
+
+            
+            var layer_cloud = new OpenLayers.Layer.XYZ(
+               "clouds",
+               "http://${s}.tile.openweathermap.org/map/clouds/${z}/${x}/${y}.png",
+               {
+                   isBaseLayer: false,
+                   opacity: 0.6,
+                   sphericalMercator: true
+               }
+           );
+
+            var layer_precipitation = new OpenLayers.Layer.XYZ(
+                "precipitation",
+                "http://${s}.tile.openweathermap.org/map/precipitation/${z}/${x}/${y}.png",
+                {
+                    isBaseLayer: false,
+                    opacity: 0.7,
+                    sphericalMercator: true
+                }
+            );
+
+            map.addLayers([layer_precipitation, layer_cloud]);
+
+            map.setCenter(lonLat, zoom);
+
+        }
+
+        function ClearData(form)
+        {
+                count = 0;
+                $("#nextweekli").removeClass('active');
+                $("#nextdayli").removeClass('active');
+                $("#rightnowli").addClass('active');
+                $("#nextweek").removeClass('active');
+                $("#nextday").removeClass('active');
+                $("#rightnow").addClass('active');
+                $("#nextweek").removeClass('in');
+                $("#nextday").removeClass('in');
+                $("#rightnow").addClass('in');
+                document.getElementById("tabs").style.display = 'none';
+                validator.resetForm();
+
+            }
+    </script>
+
+
+    <div class="container">
+        <div class="page-header" id="page-head">
+            <h2 style="text-align: center; font-weight: bold;">Forecast Search</h2>
+            <div style="background  : rgba(0,0,0,0.2);border-radius:5px;padding: 25px;">
+                <br>
+                <form role="form" id="Forecastform" method="POST">
+                    <div class="row">
+                        <div class="form-group col-md-3 dashboard-panel-2"><label id="textcolor" for="Staddress">Street Address:<span id="asterickcolor">*</span></id></label><input id="StreetAddress" pattern="^\d*[a-zA-Z][a-zA-Z0-9]*$" class="form-control" type="text" name="StreetAddress" placeholder="Enter street address" /></div>
+
+                        <div class="form-group col-md-2 dashboard-panel-2"><label id="textcolor" for="city">City:<span id="asterickcolor">*</span></id></label><input class="form-control" pattern="^\d*[a-zA-Z][a-zA-Z0-9]*$" id="Cityname" name="Cityname" type="text" placeholder="Enter the city name" /></div>
+
+                        <div class="form-group col-md-2 dashboard-panel-2">
+                            <label id="textcolor">State:<span id="asterickcolor">*</span></id></label>
+                            <select class="form-control" id="State" name="State">
+                                <option selected=selected value="Select your state...">Select your state...</option>
+                                <option value="AL">Alabama</option>
+                                <option value="AK">Alaska</option>
+                                <option value="AZ">Arizona</option>
+                                <option value="AR">Arkansas</option>
+                                <option value="CA">California</option>
+                                <option value="CO">Colorado</option>
+                                <option value="CT">Connecticut</option>
+                                <option value="DE">Delaware</option>
+                                <option value="DC">District Of Columbia</option>
+                                <option value="FL">Florida</option>
+                                <option value="GA">Georgia</option>
+                                <option value="HI">Hawaii</option>
+                                <option value="ID">Idaho</option>
+                                <option value="IL">Illinois</option>
+                                <option value="IN">Indiana</option>
+                                <option value="IA">Iowa</option>
+                                <option value="KS">Kansas</option>
+                                <option value="KY">Kentucky</option>
+                                <option value="LA">Louisiana</option>
+                                <option value="ME">Maine</option>
+                                <option value="MD">Maryland</option>
+                                <option value="MA">Massachusetts</option>
+                                <option value="MI">Michigan</option>
+                                <option value="MN">Minnesota</option>
+                                <option value="MS">Mississippi</option>
+                                <option value="MO">Missouri</option>
+                                <option value="MT">Montana</option>
+                                <option value="NE">Nebraska</option>
+                                <option value="NV">Nevada</option>
+                                <option value="NH">New Hampshire</option>
+                                <option value="NJ">New Jersey</option>
+                                <option value="NM">New Mexico</option>
+                                <option value="NY">New York</option>
+                                <option value="NC">North Carolina</option>
+                                <option value="ND">North Dakota</option>
+                                <option value="OH">Ohio</option>
+                                <option value="OK">Oklahoma</option>
+                                <option value="OR">Oregon</option>
+                                <option value="PA">Pennsylvania</option>
+                                <option value="RI">Rhode Island</option>
+                                <option value="SC">South Carolina</option>
+                                <option value="SD">South Dakota</option>
+                                <option value="TN">Tennessee</option>
+                                <option value="TX">Texas</option>
+                                <option value="UT">Utah</option>
+                                <option value="VT">Vermont</option>
+                                <option value="VA">Virginia</option>
+                                <option value="WA">Washington</option>
+                                <option value="WV">West Virginia</option>
+                                <option value="WI">Wisconsin</option>
+                                <option value="WY">Wyoming</option>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-2 dashboard-panel-2">
+                            <label id="textcolor" style="margin-top:12px;">Degree:<span id="asterickcolor">*</span></id></label> </br>
+                            <input type="radio" id="Temperature" name="Temperature" checked
+                                   true value="Fahrenheit" />
+                            Fahrenheit<input type="radio" name="Temperature" value="Celcius" style="margin-left:5px" />Celcius
+                        </div>
+                        <br>
+                        <div class="form-group pull-right " style="padding-right:10px" ;>
+                            <button type="submit" class="btn btn-primary">
+                                <span class="glyphicon glyphicon-search"></span>Search
+                            </button>
+                            <button type="reset" class="btn btn-default" onclick="ClearData(this)">
+                                <span class="glyphicon glyphicon-refresh"></span>Clear
+                            </button>
+                            <br>
+
+
+                        </div>
+                    </div>
+
+                </form>
+                <script>
+    $().ready(function () {
+
+
+        $.validator.addMethod('address', function (value) {
+            if (value.replace(/^\s+|\s+$/g, "").length !== 0) {
+                return true;
+            }
+        }, "Please enter the street address");
+
+        $.validator.addMethod('city', function (value) {
+            if (value.replace(/^\s+|\s+$/g, "").length !== 0) {
+                return true;
+            }
+        }, "Please enter the city");
+
+        jQuery.validator.addMethod('state', function (value) {
+            return (value !== "Select your state...");
+        }, "Please enter the state");
+    validator = $("#Forecastform").validate({
+
+
+
+   rules: {
+        StreetAddress:{
+        address : true,
+        required: true,
+        },
+        Cityname: {
+        required: true,
+        city : true
+        },
+        State: {
+                state: true
+            }
+
+    },
+    messages: {
+        StreetAddress: {
+            required: "Please enter the street address"},
+
+        Cityname:{
+            required: "Please enter the city"}
+   },
+        highlight: function (element) {
+            $(element).parent().addClass('error');
+        },
+        unhighlight: function (element) {
+            $(element).parent().removeClass('error');
+        },
+
+        submitHandler: function (form) {
+
+
+            $("#nextweekli").removeClass('active');
+            $("#nextdayli").removeClass('active');
+            $("#rightnowli").addClass('active');
+            $("#nextweek").removeClass('active');
+            $("#nextday").removeClass('active');
+            $("#rightnow").addClass('active');
+            $("#nextweek").removeClass('in');
+            $("#nextday").removeClass('in');
+            $("#rightnow").addClass('in');
+
+        
+            $.ajax({
+                crossDomain : true,
+                url: 'http://mybeanstalk280689-env.elasticbeanstalk.com',
+                //url: 'http://cs-server.usc.edu:38917/index.php',
+                type: 'GET',
+                data: $('#Forecastform').serialize(),
+                dataType : 'json',
+                success: function (data) {
+                    
+                $MaxTemp = data['maxtemp'];
+                $MinTemp = data['mintemp'];
+
+                lat = data['lat'];
+                long = data['long'];
+               
+                var icon = document.getElementById("icon");
+                var place = document.getElementById("Cityname").value + document.getElementById("State").value 
+                icon.innerHTML = data["icon"];
+                var summary = document.getElementById("summary");
+                summary.innerHTML = "<center><b>" + data["summary"] + " in " + document.getElementById("Cityname").value + ", " + document.getElementById("State").value + "</br><p style='font-size:65px'>" + data["temperature"] + "<sup>" + data["tempUnits"] + "</sup></h1></b></p><p><input type = image style=\"float:right;\" src=\"images/fb_icon.png\" width=\"40px\" height=\"40px\"id=\"fbpost\"><br><span style=\"color:blue\">L: " + $MinTemp + "&deg</span><span style=\"color:black\"> | </span>" + "<span style=\"color:green\">H: " + $MaxTemp + "&deg</span></center>";
+
+                //precipval
+                $("#precipval").html(data['precipitationvalue']);
+
+                //rain
+                $("#rain").html(data['precipitationprob']);
+
+                // windspeed
+                $("#windspeed").html(data['WindSpeed']);
+
+                // dewpoint
+                $("#dewpoint").html(data['DewPoint']);
+
+                // humidity
+                $("#humidity").html(data['humidity']);
+
+                // visibility
+                $("#visibility").html(data['visibility']);
+
+                // sunrise
+                $("#sunrise").html(data['sunrise']);
+
+                //sunset
+                $("#sunset").html(data['sunset']);
+
+
+
+                $("#tabs").css({
+                display: "block"
+                });
+
+
+                //
+                for (var i = 0; i < 24; i++) {
+                    $time = "#time";
+                    $img = "#image";
+                    $cc = "#cloudcover";
+                    $temp = "#temperature";
+
+                    $wind = "#wind";
+                    $humidity = "#humidity";
+                    $visibility = "#visibility";
+                    $pressure = "#pressure";
+                    //
+                    $time = $time + i;
+                    $img = $img + i;
+                    $cc = $cc + i;
+                    $temp = $temp + i;
+                    //
+                    $wind = $wind + i;
+                    $humidity = $humidity + i;
+                    $visibility = $visibility + i;
+                    $pressure = $pressure + i;
+                    //
+                    $timephp = 't';
+                    $iconphp = 'icon';
+                    $ccphp = 'cc';
+                    $tempphp = 'tmp';
+
+                    $windspeed = 'wind';
+                    $humid = 'humidity';
+                    $visibile = 'visibility';
+                    $press = 'pressure';
+                    //
+                    $timephp = $timephp + i;
+                    $iconphp = $iconphp + i;
+                    $ccphp = $ccphp + i;
+                    $tempphp = $tempphp + i;
+
+                    $windspeed = $windspeed + i;
+                    $humid = $humid + i;
+                    $visibile = $visibile + i;
+                    $press = $press + i;
+
+                    $($time).html(data[$timephp]);
+
+                    $($wind).html(data[$windspeed]);
+                    $($humidity).html(data[$humid]);
+                    $($visibility).html(data[$visibile]);
+                    $($pressure).html(data[$press]);
+                    /////////////////////////////////////////////////////////////////////////////////////
+                    //$("#t1").html(data['hr0']);
+                    if (data[$iconphp] === "clear-day")
+                        $($img).attr({src:"images/clear.png",
+                                    alt:"clear",
+                                    title:"clear"});
+                    else if (data[$iconphp] === "clear-night")
+                        $($img).attr({src:"images/clear_night.png",
+                                    alt:"clear-night",
+                                    title:"clear-night"});
+                    else if (data[$iconphp] === "rain")
+                        $($img).attr({src:"images/rain.png",
+                                    alt:"rain",
+                                    title:"rain"});
+                    else if (data[$iconphp] === "snow")
+                        $($img).attr({src:"images/snow.png",
+                                    alt:"snow",
+                                    title:"snow"});
+                    else if (data[$iconphp] === "sleet")
+                        $($img).attr({src:"images/sleet.png",
+                                    alt:"sleet",
+                                    title:"sleet"});
+                    else if (data[$iconphp] === "wind")
+                        $($img).attr({src:"images/wind.png",
+                                    alt:"wind",
+                                    title:"wind"});
+                    else if (data[$iconphp] === "fog")
+                        $($img).attr({src:"images/fog.png",
+                                    alt:"fog",
+                                    title:"fog"});
+                    else if (data[$iconphp] === "cloudy")
+                        $($img).attr({src:"images/cloudy.png",
+                                    alt:"cloudy",
+                                    title:"cloudy"});
+                    else if (data[$iconphp] === "partly-cloudy-day")
+                        $($img).attr({src:"images/cloud_day.png",
+                                    alt:"partly-cloudy-day",
+                                    title:"partly-cloudy-day"});
+                    else
+                        $($img).attr({src:"images/cloud_night.png",
+                                        alt:"partly-cloudy-night",
+                                        title:"partly-cloudy-nights"});
+                    /////////////////////////////////////////////////////////////////////////////////////
+                    $($cc).html(data[$ccphp]);
+                    $($temp).html(data[$tempphp]);
+                    $("#tempunit").html(data['tempUnits']);
+
+                }
+
+
+
+
+
+                    for (var i = 1; i <= 7; i++)
+                    {
+                        $day = "#nextday";
+                        $nextdaymonth = "#nextdaydatemonth";
+                        $icon = "#nextdayicon";
+
+                        $mintmpvalue = "#mintmpvalue";
+                        $maxtmpvalue = "#maxtmpvalue";
+                        //
+                        $modallabel = "#modallabel"+i;
+                        $nextdayiconmodal = "#nextdayiconmodal"+i;
+                        $nextdaymodal = "#nextdaymodal"+i;
+                        $nextdaymodalsummary = "#nextdaymodalsummary"+i;
+                        $windspeeddaily = "#windspeedmodal" + i;
+                        $humiditydaily = "#humiditymodal" + i;
+                        $pressuredaily = "#pressuremodal" + i;
+                        $visibilitydaily = "#visibilitymodal" + i;
+
+                        $sunrisedaily = "#sunrisemodal" + i;
+                        $sunsetdaily = "#sunsetmodal" + i;
+                        //
+                        $modallabeldata = 'modallabel'+i;
+                        $nextdaymodaldata = 'nextdaymodal'+i;
+                        $nextdaymodalsummarydata = 'nextdaymodalsummary'+i;
+
+                        $windspeeddailydata = 'windspeeddaily'+ i;
+                        $humiditydailydata = 'humiditydaily'+ i;
+                        $pressuredailydata = 'pressuredaily'+ i;
+                        $visibilitydailydata = 'visibilitydaily'+ i;
+                        $sunrisedailydata = 'sunrisedaily'+ i;
+                        $sunsetdailydata = 'sunsetdaily'+ i;
+
+                        $($nextdaymodal).html(data[$nextdaymodaldata]);
+                        $($nextdaymodalsummary).html(data[$nextdaymodalsummarydata]);
+                        $($modallabel).html(data[$modallabeldata]);
+                        $($windspeeddaily).html(data[$windspeeddailydata]);
+                        $($humiditydaily).html(data[$humiditydailydata]);
+                        $($pressuredaily).html(data[$pressuredailydata]);
+                        $($visibilitydaily).html(data[$visibilitydailydata]);
+                        $($sunrisedaily).html(data[$sunrisedailydata]);
+                        $($sunsetdaily).html(data[$sunsetdailydata]);
+
+
+
+                        //
+                        $day = $day + i;
+                        $nextdaymonth = $nextdaymonth + i;
+                        $icon = $icon + i;
+                        $mintmpvalue = $mintmpvalue + i;
+                        $maxtmpvalue = $maxtmpvalue + i;
+                        //
+                        $nextday = 'nextday'+ i;
+                        $nextdaydatemonth = 'nextdaydatemonth'+ i;
+                        $icons = 'nextdayicon'+ i;
+                        $tempmin = 'mintmpvalue'+ i;
+                        $tempmax = 'maxtmpvalue'+ i;
+
+
+                        $($day).html(data[$nextday]);
+
+                        $($nextdaymonth).html(data[$nextdaydatemonth]);
+
+                        $($mintmpvalue).html(data[$tempmin]);
+                        $($maxtmpvalue).html(data[$tempmax]);
+
+                    if(data[$icons] === "clear-day")
+                    {
+                            $($icon).attr({src:"images/clear.png",
+                                            alt:"clear",
+                                            title:"clear"});
+                            $($nextdayiconmodal).attr({src:"images/clear.png",
+                                            alt:"clear",
+                                            title:"clear"});
+
+                    }
+                    else if(data[$icons] === "clear-night")
+                    {
+                        $($icon).attr({src:"images/clear_night.png",
+                                        alt:"clear-night",
+                                        title:"clear-night"});
+                    $($nextdayiconmodal).attr({src:"images/clear_night.png",
+                                        alt:"clear-night",
+                                        title:"clear-night"});
+
+                    }
+                    else if(data[$icons] === "rain")
+                    {
+                        $($icon).attr({src:"images/rain.png",
+                                        alt:"rain",
+                                        title:"rain"});
+                    $($nextdayiconmodal).attr({src:"images/clear_night.png",
+                                        alt:"clear-night",
+                                        title:"clear-night"});
+                    }
+                    else if(data[$icons] === "snow")
+                    {
+                        $($icon).attr({src:"images/snow.png",
+                                        alt:"snow",
+                                        title:"snow"});
+                        $($nextdayiconmodal).attr({src:"images/clear_night.png",
+                                        alt:"clear-night",
+                                        title:"clear-night"});
+                    }
+                    else if(data[$icons] === "sleet")
+                    {
+                        $($icon).attr({src:"images/sleet.png",
+                                        alt:"sleet",
+                                        title:"sleet"});
+                        $($nextdayiconmodal).attr({src:"images/clear_night.png",
+                                        alt:"clear-night",
+                                        title:"clear-night"});
+                    }
+                    else if(data[$icons] === "wind")
+                    {
+                        $($icon).attr({src:"images/wind.png",
+                                        alt:"wind",
+                                        title:"wind"});
+                    $($nextdayiconmodal).attr({src:"images/clear_night.png",
+                                        alt:"clear-night",
+                                        title:"clear-night"});
+                    }
+                    else if(data[$icons] === "fog")
+                    {
+                        $($icon).attr({src:"images/fog.png",
+                                        alt:"fog",
+                                        title:"fog"});
+                        $($nextdayiconmodal).attr({src:"images/clear_night.png",
+                                        alt:"clear-night",
+                                        title:"clear-night"});
+                    }
+                    else if(data[$icons] === "cloudy")
+                    {
+                        $($icon).attr({src:"images/cloudy.png",
+                                        alt:"cloudy",
+                                        title:"cloudy"});
+                        $($nextdayiconmodal).attr({src:"images/clear_night.png",
+                                        alt:"clear-night",
+                                        title:"clear-night"});
+                    }
+                    else if(data[$icons] === "partly-cloudy-day")
+                    {
+                        $($icon).attr({src:"images/cloud_day.png",
+                                        alt:"partly-cloudy-day",
+                                        title:"partly-cloudy-day"});
+                        $($nextdayiconmodal).attr({src:"images/clear_night.png",
+                                        alt:"clear-night",
+                                        title:"clear-night"});
+                    }
+                    else
+                    {
+                        $($icon).attr({src:"images/cloud_night.png",
+                                        alt:"partly-cloudy-night",
+                                        title:"partly-cloudy-nights"});
+                        $($nextdayiconmodal).attr({src:"images/clear_night.png",
+                                        alt:"clear-night",
+                                        title:"clear-night"});
+                    }
+
+                    }
+
+                    var summaryfb = null;
+                    var $icons = "iconfb";
+                    if (data["iconfb"] === "clear-day")
+                    {
+                            iconstring = "http://cs-server.usc.edu:45678/hw/hw8/images/clear.png";
+                            summaryfb= "Clear";
+
+                    }
+                    else if (data["iconfb"] === "clear-night")
+                    {
+                        iconstring = "http://cs-server.usc.edu:45678/hw/hw8/images/clear_night.png";
+                        summaryfb= "Clear";
+
+                    }
+                    else if (data["iconfb"] === "rain")
+                    {
+                        iconstring = "http://cs-server.usc.edu:45678/hw/hw8/images/rain.png";
+                        summaryfb= "Rain";
+                    }
+                    else if (data["iconfb"] === "snow")
+                    {
+                       iconstring = "http://cs-server.usc.edu:45678/hw/hw8/images/snow.png";
+                        summaryfb= "Snow";
+                    }
+                    else if (data["iconfb"] === "sleet")
+                    {
+                        iconstring = "http://cs-server.usc.edu:45678/hw/hw8/images/sleet.png";
+                        summaryfb= "Sleet";
+                    }
+                    else if (data["iconfb"] === "wind")
+                    {
+                        iconstring = "http://cs-server.usc.edu:45678/hw/hw8/images/wind.png";
+                        summaryfb= "Wind";
+                    }
+                    else if (data["iconfb"] === "fog")
+                    {
+                        iconstring = "http://cs-server.usc.edu:45678/hw/hw8/images/fog.png";
+                        summaryfb= "Fog";
+                    }
+                    else if (data["iconfb"] === "cloudy")
+                    {
+                        iconstring = "http://cs-server.usc.edu:45678/hw/hw8/images/cloudy.png";
+                        summaryfb= "Cloudy";
+                    }
+                    else if (data["iconfb"] === "partly-cloudy-day")
+                    {
+                        iconstring = "http://cs-server.usc.edu:45678/hw/hw8/images/cloud_day.png";
+                        summaryfb= "Cloudy Day";
+                    }
+                    else
+                    {
+                        iconstring = "http://cs-server.usc.edu:45678/hw/hw8/images/cloud_night.png";
+                        summaryfb= "Cloudy Night";
+                    }
+                    summaryfb = summaryfb+", "+data["temperature"];
+                    var units = data['tempUnits'];
+                    if(units == "&#8451")
+                    {
+                        units = '\xB0'+'C';
+                    }
+                    else
+                    {
+                        units = '\xB0'+'F';
+                    }
+
+
+
+
+                    var place = document.getElementById("Cityname").value + ", " + document.getElementById("State").value
+                    document.getElementById('fbpost').onclick = function() {
+                        FB.ui({
+                            method: 'feed',
+                            link: 'http://forecast.io/',
+                            name: 'Current Weather in '+place,
+                            description: summaryfb+" "+units,
+                            caption: 'WEATHER INFORMATION FROM FORECAST.IO',
+                            picture: iconstring,
+                        },
+                        function (response)
+                        {
+                            if (response)
+                            {
+                                alert('Posted Successfully');
+                            }
+                            else
+                            {
+                                alert('Not Posted');
+                            }
+                        });
+                    }
+
+                    var isActive = $('#rightnow').hasClass('active');
+                    if (isActive == true) {
+                        
+
+                        map();
+
+                        
+                    }
+                    } ,
+                    error:function(data)
+                    {
+                        alert("Please enter valid values");
+                    }
+            });
+
+    }
+
+
+
+
+    });
+
+
+
+
+   
+
+});
+
+                </script>
+                <p id="textcolor" align="right">Powered by: <a href="http://forecast.io"><img src="forecast_logo.png" width="80px" height="50px"></a></p>
+            </div>
+            <br>
+        </div>
+
+
+
+        <div id="tabs" style="display: none;">
+            <ul class="nav nav-tabs" id="DataTab">
+                <li id="rightnowli" class="active"><a data-toggle="tab" href="#rightnow" style="font-size:14px;">Right Now</a></li>
+                <li id="nextdayli"><a data-toggle="tab" href="#nextday" style="font-size:14px;">Next 24 Hours</a></li>
+                <li id="nextweekli"><a data-toggle="tab" href="#nextweek" style="font-size:14px;">Next 7 Days</a></li>
+            </ul>
+            <div class="tab-content">
+                <div id="rightnow" class="tab-pane fade in active">
+                    <div class="row" style="margin-left:0px;margin-right: 0px;">
+                        <div class="col-md-6" id="summaryrow">
+                            <div class="row" style="background-color: rgb(242, 126, 127);">
+                                <div class="col-md-6" id="icon" style="padding-top:15px;padding-bottom:15px;">
+                                </div>
+                                <div class="col-md-6" id="summary" style="color:white">
+                                </div>
+                            </div>
+                            <div class="row oddRowColor">
+                                <div class="col-xs-7" style="vertical-align:middle;">
+                                    Precipitation
+                                </div>
+                                <div class="col-xs-5" id="precipval">
+                                </div>
+                            </div>
+                            <div class="row evenRowColor">
+                                <div class="col-xs-7">
+                                    Chance of Rain
+                                </div>
+                                <div class="col-xs-5" id="rain">
+                                </div>
+                            </div>
+                            <div class="row oddRowColor">
+                                <div class="col-xs-7">
+                                    Wind Speed
+                                </div>
+                                <div class="col-xs-5" id="windspeed">
+                                </div>
+                            </div>
+                            <div class="row evenRowColor">
+                                <div class="col-xs-7">
+                                    Dew Point
+                                </div>
+                                <div class="col-xs-5" id="dewpoint">
+                                </div>
+                            </div>
+                            <div class="row oddRowColor">
+                                <div class="col-xs-7">
+                                    Humidity
+                                </div>
+                                <div class="col-xs-5" id="humidity">
+                                </div>
+                            </div>
+                            <div class="row evenRowColor">
+                                <div class="col-xs-7">
+                                    Visibility
+                                </div>
+                                <div class="col-xs-5" id="visibility">
+                                </div>
+                            </div>
+                            <div class="row oddRowColor">
+                                <div class="col-xs-7">
+                                    Sunrise
+                                </div>
+                                <div class="col-xs-5" id="sunrise">
+                                </div>
+                            </div>
+                            <div class="row evenRowColor">
+                                <div class="col-xs-7">
+                                    Sunset
+                                </div>
+                                <div class="col-xs-5" id="sunset">
+                                </div>
+                            </div>
+                        </div>
+                       
+                            <div class="col-md-6" id="mymap" style="border-width:2px; border-color:white; border-style:solid; height:422px;">
+
+                            </div>
+                    </div>
+                </div>
+                <div id="nextday" class="tab-pane fade">
+                    <div class="row nextday" style="margin-left:0px;margin-right: 0px;background-color:rgb(47, 112, 168); color:rgb(238, 238, 238);margin-left:0px;margin-right: 0px; ">
+                        <div class="col-xs-2 breakword">
+                            <center><b>Time</b></center>
+                        </div>
+                        <div class="col-xs-2 breakword">
+                            <center><b>Summary</b></center>
+                        </div>
+                        <div class="col-xs-3 breakword">
+                            <center><b>Cloud Cover</b></center>
+                        </div>
+                        <div class="col-xs-2 breakword">
+                            <center><b>Temp(<span id="tempunit"></span>)</b></center>
+                        </div>
+                        <div class="col-xs-3 breakword">
+                            <center><b>View Details</b></center>
+                        </div>
+                    </div>
+
+                    <div class="row hours" style="margin-left:0px;margin-right: 0px;padding-top:10px;padding-bottom:15px;">
+                        <div class="col-xs-2">
+                            <center><p id="time0"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><img id="image0" src="" width="50px" height="50px"></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center><p id="cloudcover0"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><p id="temperature0"></p></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center>
+                                <button class="btn btn-default" type="button" data-toggle="collapse" data-target="#viewdetails0" aria-expanded="false" aria-controls="viewdetails0" style="border: none;padding: 0;
+    background: none;">
+                                    <span class="glyphicon glyphicon-plus" aria-hidden="true" style="color:rgb(47, 112, 168);"></span>
+                                </button>
+
+                            </center>
+
+                        </div>
+                    </div>
+                    <div class="row" style="background-color:rgb(232, 232, 232);margin-left:0px;margin-right: 0px;">
+
+                        <div class="collapse" id="viewdetails0" style="background-color:rgb(232, 232, 232);">
+                            <div class="well" style="background-color:rgb(232, 232, 232);">
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr bgcolor="#FFFFFF">
+                                                <th bgcolor="#FFFFFF"><center>Wind</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Humidity</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Visibility</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Pressure</center></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>
+                                                    <center><p id="wind0"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="humidity0"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="visibility0"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="pressure0"></p></center>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="row hours" style="margin-left:0px;margin-right: 0px;padding-top:10px;padding-bottom:15px;">
+                        <div class="col-xs-2">
+                            <center><p id="time1"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><img id="image1" src="" width="50px" height="50px"></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center><p id="cloudcover1"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><p id="temperature1"></p></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center>
+                                <button class="btn btn-default" type="button" data-toggle="collapse" data-target="#viewdetails1" aria-expanded="false" aria-controls="viewdetails1" style="border: none;padding: 0;
+    background: none;">
+                                    <span class="glyphicon glyphicon-plus" aria-hidden="true" style="color:rgb(47, 112, 168);"></span>
+                                </button>
+
+                            </center>
+                        </div>
+                    </div>
+
+                    <div class="row" style="background-color:rgb(232, 232, 232);margin-left:0px;margin-right: 0px;">
+
+                        <div class="collapse" id="viewdetails1" style="background-color:rgb(232, 232, 232);">
+                            <div class="well" style="background-color:rgb(232, 232, 232);">
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr bgcolor="#FFFFFF">
+                                                <th bgcolor="#FFFFFF"><center>Wind</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Humidity</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Visibility</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Pressure</center></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>
+                                                    <center><p id="wind1"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="humidity1"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="visibility1"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="pressure1"></p></center>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="row hours" style="margin-left:0px;margin-right: 0px;padding-top:10px;padding-bottom:15px;">
+                        <div class="col-xs-2">
+                            <center><p id="time2"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><img id="image2" src="" width="50px" height="50px"></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center><p id="cloudcover2"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><p id="temperature2"></p></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center>
+                                <button class="btn btn-default" type="button" data-toggle="collapse" data-target="#viewdetails2" aria-expanded="false" aria-controls="viewdetails2" style="border: none;padding: 0;
+    background: none;">
+                                    <span class="glyphicon glyphicon-plus" aria-hidden="true" style="color:rgb(47, 112, 168);"></span>
+                                </button>
+
+                            </center>
+                        </div>
+                    </div>
+                    <div class="row" style="background-color:rgb(232, 232, 232);margin-left:0px;margin-right: 0px;">
+
+                        <div class="collapse" id="viewdetails2" style="background-color:rgb(232, 232, 232);">
+                            <div class="well" style="background-color:rgb(232, 232, 232);">
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr bgcolor="#FFFFFF">
+                                                <th bgcolor="#FFFFFF"><center>Wind</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Humidity</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Visibility</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Pressure</center></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>
+                                                    <center><p id="wind2"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="humidity2"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="visibility2"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="pressure2"></p></center>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="row hours" style="margin-left:0px;margin-right: 0px;padding-top:10px;padding-bottom:15px;">
+                        <div class="col-xs-2">
+                            <center><p id="time3"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><img id="image3" src="" width="50px" height="50px"></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center><p id="cloudcover3"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><p id="temperature3"></p></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center>
+                                <button class="btn btn-default" type="button" data-toggle="collapse" data-target="#viewdetails3" aria-expanded="false" aria-controls="viewdetails3" style="border: none;padding: 0;
+    background: none;">
+                                    <span class="glyphicon glyphicon-plus" aria-hidden="true" style="color:rgb(47, 112, 168);"></span>
+                                </button>
+
+                            </center>
+                        </div>
+                    </div>
+                    <div class="row" style="background-color:rgb(232, 232, 232);margin-left:0px;margin-right: 0px;">
+
+                        <div class="collapse" id="viewdetails3" style="background-color:rgb(232, 232, 232);">
+                            <div class="well" style="background-color:rgb(232, 232, 232);">
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr bgcolor="#FFFFFF">
+                                                <th bgcolor="#FFFFFF"><center>Wind</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Humidity</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Visibility</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Pressure</center></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>
+                                                    <center><p id="wind3"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="humidity3"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="visibility3"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="pressure3"></p></center>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="row hours" style="margin-left:0px;margin-right: 0px;padding-top:10px;padding-bottom:15px;">
+                        <div class="col-xs-2">
+                            <center><p id="time4"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><img id="image4" src="" width="50px" height="50px"></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center><p id="cloudcover4"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><p id="temperature4"></p></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center>
+                                <button class="btn btn-default" type="button" data-toggle="collapse" data-target="#viewdetails4" aria-expanded="false" aria-controls="viewdetails4" style="border: none;padding: 0;
+    background: none;">
+                                    <span class="glyphicon glyphicon-plus" aria-hidden="true" style="color:rgb(47, 112, 168);"></span>
+                                </button>
+
+                            </center>
+                        </div>
+                    </div>
+                    <div class="row" style="background-color:rgb(232, 232, 232); margin-left:0px;margin-right: 0px;">
+
+                        <div class="collapse" id="viewdetails4" style="background-color:rgb(232, 232, 232);">
+                            <div class="well" style="background-color:rgb(232, 232, 232);">
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr bgcolor="#FFFFFF">
+                                                <th bgcolor="#FFFFFF"><center>Wind</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Humidity</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Visibility</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Pressure</center></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>
+                                                    <center><p id="wind4"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="humidity4"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="visibility4"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="pressure4"></p></center>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="row hours" style="margin-left:0px;margin-right: 0px;padding-top:10px;padding-bottom:15px;">
+                        <div class="col-xs-2">
+                            <center><p id="time5"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><img id="image5" src="" width="50px" height="50px"></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center><p id="cloudcover5"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><p id="temperature5"></p></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center>
+                                <button class="btn btn-default" type="button" data-toggle="collapse" data-target="#viewdetails5" aria-expanded="false" aria-controls="viewdetails5" style="border: none;padding: 0;
+    background: none;">
+                                    <span class="glyphicon glyphicon-plus" aria-hidden="true" style="color:rgb(47, 112, 168);"></span>
+                                </button>
+
+                            </center>
+                        </div>
+                    </div>
+                    <div class="row" style="background-color:rgb(232, 232, 232);margin-left:0px;margin-right: 0px;">
+
+                        <div class="collapse" id="viewdetails5" style="background-color:rgb(232, 232, 232);">
+                            <div class="well" style="background-color:rgb(232, 232, 232);">
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr bgcolor="#FFFFFF">
+                                                <th bgcolor="#FFFFFF"><center>Wind</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Humidity</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Visibility</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Pressure</center></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>
+                                                    <center><p id="wind5"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="humidity5"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="visibility5"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="pressure5"></p></center>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="row hours" style="margin-left:0px;margin-right: 0px;padding-top:10px;padding-bottom:15px;">
+                        <div class="col-xs-2">
+                            <center><p id="time6"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><img id="image6" src="" width="50px" height="50px"></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center><p id="cloudcover6"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><p id="temperature6"></p></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center>
+                                <button class="btn btn-default" type="button" data-toggle="collapse" data-target="#viewdetails6" aria-expanded="false" aria-controls="viewdetails6" style="border: none;padding: 0;
+    background: none;">
+                                    <span class="glyphicon glyphicon-plus" aria-hidden="true" style="color:rgb(47, 112, 168);"></span>
+                                </button>
+
+                            </center>
+                        </div>
+                    </div>
+
+                    <div class="row" style="background-color:rgb(232, 232, 232); margin-left:0px;margin-right: 0px;">
+
+                        <div class="collapse" id="viewdetails6" style="background-color:rgb(232, 232, 232);">
+                            <div class="well" style="background-color:rgb(232, 232, 232);">
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr bgcolor="#FFFFFF">
+                                                <th bgcolor="#FFFFFF"><center>Wind</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Humidity</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Visibility</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Pressure</center></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>
+                                                    <center><p id="wind6"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="humidity6"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="visibility6"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="pressure6"></p></center>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="row hours" style="margin-left:0px;margin-right: 0px;padding-top:10px;padding-bottom:15px;">
+                        <div class="col-xs-2">
+                            <center><p id="time7"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><img id="image7" src="" width="50px" height="50px"></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center><p id="cloudcover7"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><p id="temperature7"></p></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center>
+                                <button class="btn btn-default" type="button" data-toggle="collapse" data-target="#viewdetails7" aria-expanded="false" aria-controls="viewdetails7" style="border: none;padding: 0;
+    background: none;">
+                                    <span class="glyphicon glyphicon-plus" aria-hidden="true" style="color:rgb(47, 112, 168);"></span>
+                                </button>
+
+                            </center>
+                        </div>
+                    </div>
+                    <div class="row" style="background-color:rgb(232, 232, 232); margin-left:0px;margin-right: 0px;">
+
+                        <div class="collapse" id="viewdetails7" style="background-color:rgb(232, 232, 232);">
+                            <div class="well" style="background-color:rgb(232, 232, 232);">
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr bgcolor="#FFFFFF">
+                                                <th bgcolor="#FFFFFF"><center>Wind</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Humidity</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Visibility</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Pressure</center></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>
+                                                    <center><p id="wind7"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="humidity7"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="visibility7"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="pressure7"></p></center>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="row hours" style="margin-left:0px;margin-right: 0px;padding-top:10px;padding-bottom:15px;">
+                        <div class="col-xs-2">
+                            <center><p id="time8"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><img id="image8" src="" width="50px" height="50px"></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center><p id="cloudcover8"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><p id="temperature8"></p></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center>
+                                <button class="btn btn-default" type="button" data-toggle="collapse" data-target="#viewdetails8" aria-expanded="false" aria-controls="viewdetails8" style="border: none;padding: 0;
+    background: none;">
+                                    <span class="glyphicon glyphicon-plus" aria-hidden="true" style="color:rgb(47, 112, 168);"></span>
+                                </button>
+
+                            </center>
+                        </div>
+                    </div>
+                    <div class="row" style="background-color:rgb(232, 232, 232); margin-left:0px;margin-right: 0px;">
+
+                        <div class="collapse" id="viewdetails8" style="background-color:rgb(232, 232, 232);">
+                            <div class="well" style="background-color:rgb(232, 232, 232);">
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr bgcolor="#FFFFFF">
+                                                <th bgcolor="#FFFFFF"><center>Wind</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Humidity</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Visibility</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Pressure</center></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>
+                                                    <center><p id="wind8"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="humidity8"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="visibility8"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="pressure8"></p></center>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="row hours" style="margin-left:0px;margin-right: 0px;padding-top:10px;padding-bottom:15px;">
+                        <div class="col-xs-2">
+                            <center><p id="time9"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><img id="image9" src="" width="50px" height="50px"></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center><p id="cloudcover9"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><p id="temperature9"></p></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center>
+                                <button class="btn btn-default" type="button" data-toggle="collapse" data-target="#viewdetails9" aria-expanded="false" aria-controls="viewdetails9" style="border: none;padding: 0;
+    background: none;">
+                                    <span class="glyphicon glyphicon-plus" aria-hidden="true" style="color:rgb(47, 112, 168);"></span>
+                                </button>
+
+                            </center>
+                        </div>
+                    </div>
+                    <div class="row" style="background-color:rgb(232, 232, 232); margin-left:0px;margin-right: 0px;">
+
+                        <div class="collapse" id="viewdetails9" style="background-color:rgb(232, 232, 232);">
+                            <div class="well" style="background-color:rgb(232, 232, 232);">
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr bgcolor="#FFFFFF">
+                                                <th bgcolor="#FFFFFF"><center>Wind</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Humidity</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Visibility</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Pressure</center></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>
+                                                    <center><p id="wind9"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="humidity9"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="visibility9"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="pressure9"></p></center>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="row hours" style="margin-left:0px;margin-right: 0px;padding-top:10px;padding-bottom:15px;">
+                        <div class="col-xs-2">
+                            <center><p id="time10"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><img id="image10" src="" width="50px" height="50px"></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center><p id="cloudcover10"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><p id="temperature10"></p></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center>
+                                <button class="btn btn-default" type="button" data-toggle="collapse" data-target="#viewdetails10" aria-expanded="false" aria-controls="viewdetails10" style="border: none;padding: 0;
+    background: none;">
+                                    <span class="glyphicon glyphicon-plus" aria-hidden="true" style="color:rgb(47, 112, 168);"></span>
+                                </button>
+
+                            </center>
+                        </div>
+                    </div>
+
+                    <div class="row" style="background-color:rgb(232, 232, 232); margin-left:0px;margin-right: 0px;">
+
+                        <div class="collapse" id="viewdetails10" style="background-color:rgb(232, 232, 232);">
+                            <div class="well" style="background-color:rgb(232, 232, 232);">
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr bgcolor="#FFFFFF">
+                                                <th bgcolor="#FFFFFF"><center>Wind</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Humidity</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Visibility</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Pressure</center></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>
+                                                    <center><p id="wind10"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="humidity10"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="visibility10"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="pressure10"></p></center>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="row hours" style="margin-left:0px;margin-right: 0px;padding-top:10px;padding-bottom:15px;">
+                        <div class="col-xs-2">
+                            <center><p id="time11"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><img id="image11" src="" width="50px" height="50px"></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center><p id="cloudcover11"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><p id="temperature11"></p></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center>
+                                <button class="btn btn-default" type="button" data-toggle="collapse" data-target="#viewdetails11" aria-expanded="false" aria-controls="viewdetails11" style="border: none;padding: 0;
+    background: none;">
+                                    <span class="glyphicon glyphicon-plus" aria-hidden="true" style="color:rgb(47, 112, 168);"></span>
+                                </button>
+
+                            </center>
+                        </div>
+                    </div>
+                    <div class="row" style="background-color:rgb(232, 232, 232); margin-left:0px;margin-right: 0px;">
+
+                        <div class="collapse" id="viewdetails11" style="background-color:rgb(232, 232, 232);">
+                            <div class="well" style="background-color:rgb(232, 232, 232);">
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr bgcolor="#FFFFFF">
+                                                <th bgcolor="#FFFFFF"><center>Wind</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Humidity</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Visibility</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Pressure</center></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>
+                                                    <center><p id="wind11"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="humidity11"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="visibility11"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="pressure11"></p></center>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+
+                    <div class="row hours" style="margin-left:0px;margin-right: 0px;padding-top:10px;padding-bottom:15px;">
+                        <div class="col-xs-2">
+                            <center><p id="time12"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><img id="image12" src="" width="50px" height="50px"></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center><p id="cloudcover12"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><p id="temperature12"></p></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center>
+                                <button class="btn btn-default" type="button" data-toggle="collapse" data-target="#viewdetails12" aria-expanded="false" aria-controls="viewdetails12" style="border: none;padding: 0;
+    background: none;">
+                                    <span class="glyphicon glyphicon-plus" aria-hidden="true" style="color:rgb(47, 112, 168);"></span>
+                                </button>
+
+                            </center>
+                        </div>
+                    </div>
+                    <div class="row" style="background-color:rgb(232, 232, 232); margin-left:0px;margin-right: 0px;">
+
+                        <div class="collapse" id="viewdetails12" style="background-color:rgb(232, 232, 232);">
+                            <div class="well" style="background-color:rgb(232, 232, 232);">
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr bgcolor="#FFFFFF">
+                                                <th bgcolor="#FFFFFF"><center>Wind</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Humidity</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Visibility</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Pressure</center></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>
+                                                    <center><p id="wind12"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="humidity12"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="visibility12"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="pressure12"></p></center>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+
+                    <div class="row hours" style="margin-left:0px;margin-right: 0px;padding-top:10px;padding-bottom:15px;">
+                        <div class="col-xs-2">
+                            <center><p id="time13"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><img id="image13" src="" width="50px" height="50px"></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center><p id="cloudcover13"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><p id="temperature13"></p></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center>
+                                <button class="btn btn-default" type="button" data-toggle="collapse" data-target="#viewdetails13" aria-expanded="false" aria-controls="viewdetails13" style="border: none;padding: 0;
+    background: none;">
+                                    <span class="glyphicon glyphicon-plus" aria-hidden="true" style="color:rgb(47, 112, 168);"></span>
+                                </button>
+
+                            </center>
+                        </div>
+                    </div>
+                    <div class="row" style="background-color:rgb(232, 232, 232); margin-left:0px;margin-right: 0px;">
+
+                        <div class="collapse" id="viewdetails13" style="background-color:rgb(232, 232, 232);">
+                            <div class="well" style="background-color:rgb(232, 232, 232);">
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr bgcolor="#FFFFFF">
+                                                <th bgcolor="#FFFFFF"><center>Wind</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Humidity</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Visibility</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Pressure</center></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>
+                                                    <center><p id="wind13"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="humidity13"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="visibility13"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="pressure13"></p></center>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="row hours" style="margin-left:0px;margin-right: 0px;padding-top:10px;padding-bottom:15px;">
+                        <div class="col-xs-2">
+                            <center><p id="time14"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><img id="image14" src="" width="50px" height="50px"></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center><p id="cloudcover14"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><p id="temperature14"></p></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center>
+                                <button class="btn btn-default" type="button" data-toggle="collapse" data-target="#viewdetails14" aria-expanded="false" aria-controls="viewdetails14" style="border: none;padding: 0;
+    background: none;">
+                                    <span class="glyphicon glyphicon-plus" aria-hidden="true" style="color:rgb(47, 112, 168);"></span>
+                                </button>
+
+                            </center>
+                        </div>
+                    </div>
+                    <div class="row" style="background-color:rgb(232, 232, 232); margin-left:0px;margin-right: 0px;">
+
+                        <div class="collapse" id="viewdetails14" style="background-color:rgb(232, 232, 232);">
+                            <div class="well" style="background-color:rgb(232, 232, 232);">
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr bgcolor="#FFFFFF">
+                                                <th bgcolor="#FFFFFF"><center>Wind</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Humidity</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Visibility</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Pressure</center></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>
+                                                    <center><p id="wind14"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="humidity14"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="visibility14"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="pressure14"></p></center>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="row hours" style="margin-left:0px;margin-right: 0px;padding-top:10px;padding-bottom:15px;">
+                        <div class="col-xs-2">
+                            <center><p id="time15"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><img id="image15" src="" width="50px" height="50px"></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center><p id="cloudcover15"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><p id="temperature15"></p></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center>
+                                <button class="btn btn-default" type="button" data-toggle="collapse" data-target="#viewdetails15" aria-expanded="false" aria-controls="viewdetails15" style="border: none;padding: 0;
+    background: none;">
+                                    <span class="glyphicon glyphicon-plus" aria-hidden="true" style="color:rgb(47, 112, 168);"></span>
+                                </button>
+
+                            </center>
+                        </div>
+                    </div>
+                    <div class="row" style="background-color:rgb(232, 232, 232); margin-left:0px;margin-right: 0px;">
+
+                        <div class="collapse" id="viewdetails15" style="background-color:rgb(232, 232, 232);">
+                            <div class="well" style="background-color:rgb(232, 232, 232);">
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr bgcolor="#FFFFFF">
+                                                <th bgcolor="#FFFFFF"><center>Wind</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Humidity</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Visibility</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Pressure</center></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>
+                                                    <center><p id="wind15"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="humidity15"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="visibility15"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="pressure15"></p></center>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="row hours" style="margin-left:0px;margin-right: 0px;padding-top:10px;padding-bottom:15px;">
+                        <div class="col-xs-2">
+                            <center><p id="time16"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><img id="image16" src="" width="50px" height="50px"></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center><p id="cloudcover16"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><p id="temperature16"></p></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center>
+                                <button class="btn btn-default" type="button" data-toggle="collapse" data-target="#viewdetails16" aria-expanded="false" aria-controls="viewdetails16" style="border: none;padding: 0;
+    background: none;">
+                                    <span class="glyphicon glyphicon-plus" aria-hidden="true" style="color:rgb(47, 112, 168);"></span>
+                                </button>
+
+                            </center>
+                        </div>
+                    </div>
+
+                    <div class="row" style="background-color:rgb(232, 232, 232); margin-left:0px;margin-right: 0px;">
+
+                        <div class="collapse" id="viewdetails16" style="background-color:rgb(232, 232, 232);">
+                            <div class="well" style="background-color:rgb(232, 232, 232);">
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr bgcolor="#FFFFFF">
+                                                <th bgcolor="#FFFFFF"><center>Wind</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Humidity</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Visibility</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Pressure</center></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>
+                                                    <center><p id="wind16"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="humidity16"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="visibility16"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="pressure16"></p></center>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="row hours" style="margin-left:0px;margin-right: 0px;padding-top:10px;padding-bottom:15px;">
+                        <div class="col-xs-2">
+                            <center><p id="time17"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><img id="image17" src="" width="50px" height="50px"></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center><p id="cloudcover17"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><p id="temperature17"></p></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center>
+                                <button class="btn btn-default" type="button" data-toggle="collapse" data-target="#viewdetails17" aria-expanded="false" aria-controls="viewdetails17" style="border: none;padding: 0;
+    background: none;">
+                                    <span class="glyphicon glyphicon-plus" aria-hidden="true" style="color:rgb(47, 112, 168);"></span>
+                                </button>
+
+                            </center>
+                        </div>
+                    </div>
+                    <div class="row" style="background-color:rgb(232, 232, 232); margin-left:0px;margin-right: 0px;">
+
+                        <div class="collapse" id="viewdetails17" style="background-color:rgb(232, 232, 232);">
+                            <div class="well" style="background-color:rgb(232, 232, 232);">
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr bgcolor="#FFFFFF">
+                                                <th bgcolor="#FFFFFF"><center>Wind</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Humidity</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Visibility</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Pressure</center></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>
+                                                    <center><p id="wind17"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="humidity17"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="visibility17"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="pressure17"></p></center>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="row hours" style="margin-left:0px;margin-right: 0px;padding-top:10px;padding-bottom:15px;">
+                        <div class="col-xs-2">
+                            <center><p id="time18"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><img id="image18" src="" width="50px" height="50px"></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center><p id="cloudcover18"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><p id="temperature18"></p></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center>
+                                <button class="btn btn-default" type="button" data-toggle="collapse" data-target="#viewdetails18" aria-expanded="false" aria-controls="viewdetails18" style="border: none;padding: 0;
+    background: none;">
+                                    <span class="glyphicon glyphicon-plus" aria-hidden="true" style="color:rgb(47, 112, 168);"></span>
+                                </button>
+
+                            </center>
+                        </div>
+                    </div>
+                    <div class="row" style="background-color:rgb(232, 232, 232); margin-left:0px;margin-right: 0px;">
+
+                        <div class="collapse" id="viewdetails18" style="background-color:rgb(232, 232, 232);">
+                            <div class="well" style="background-color:rgb(232, 232, 232);">
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr bgcolor="#FFFFFF">
+                                                <th bgcolor="#FFFFFF"><center>Wind</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Humidity</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Visibility</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Pressure</center></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>
+                                                    <center><p id="wind18"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="humidity18"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="visibility18"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="pressure18"></p></center>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="row hours" style="margin-left:0px;margin-right: 0px;padding-top:10px;padding-bottom:15px;">
+                        <div class="col-xs-2">
+                            <center><p id="time19"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><img id="image19" src="" width="50px" height="50px"></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center><p id="cloudcover19"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><p id="temperature19"></p></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center>
+                                <button class="btn btn-default" type="button" data-toggle="collapse" data-target="#viewdetails19" aria-expanded="false" aria-controls="viewdetails19" style="border: none;padding: 0;
+    background: none;">
+                                    <span class="glyphicon glyphicon-plus" aria-hidden="true" style="color:rgb(47, 112, 168);"></span>
+                                </button>
+
+                            </center>
+                        </div>
+                    </div>
+                    <div class="row" style="background-color:rgb(232, 232, 232); margin-left:0px;margin-right: 0px;">
+
+                        <div class="collapse" id="viewdetails19" style="background-color:rgb(232, 232, 232);">
+                            <div class="well" style="background-color:rgb(232, 232, 232);">
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr bgcolor="#FFFFFF">
+                                                <th bgcolor="#FFFFFF"><center>Wind</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Humidity</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Visibility</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Pressure</center></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>
+                                                    <center><p id="wind19"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="humidity19"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="visibility19"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="pressure19"></p></center>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="row hours" style="margin-left:0px;margin-right: 0px;padding-top:10px;padding-bottom:15px;">
+                        <div class="col-xs-2">
+                            <center><p id="time20"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><img id="image20" src="" width="50px" height="50px"></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center><p id="cloudcover20"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><p id="temperature20"></p></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center>
+                                <button class="btn btn-default" type="button" data-toggle="collapse" data-target="#viewdetails20" aria-expanded="false" aria-controls="viewdetails20" style="border: none;padding: 0;
+    background: none;">
+                                    <span class="glyphicon glyphicon-plus" aria-hidden="true" style="color:rgb(47, 112, 168);"></span>
+                                </button>
+
+                            </center>
+                        </div>
+                    </div>
+                    <div class="row" style="background-color:rgb(232, 232, 232); margin-left:0px;margin-right: 0px;">
+
+                        <div class="collapse" id="viewdetails20" style="background-color:rgb(232, 232, 232);">
+                            <div class="well" style="background-color:rgb(232, 232, 232);">
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr bgcolor="#FFFFFF">
+                                                <th bgcolor="#FFFFFF"><center>Wind</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Humidity</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Visibility</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Pressure</center></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>
+                                                    <center><p id="wind20"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="humidity20"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="visibility20"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="pressure20"></p></center>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="row hours" style="margin-left:0px;margin-right: 0px;padding-top:10px;padding-bottom:15px;">
+                        <div class="col-xs-2">
+                            <center><p id="time21"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><img id="image21" src="" width="50px" height="50px"></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center><p id="cloudcover21"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><p id="temperature21"></p></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center>
+                                <button class="btn btn-default" type="button" data-toggle="collapse" data-target="#viewdetails21" aria-expanded="false" aria-controls="viewdetails21" style="border: none;padding: 0;
+    background: none;">
+                                    <span class="glyphicon glyphicon-plus" aria-hidden="true" style="color:rgb(47, 112, 168);"></span>
+                                </button>
+
+                            </center>
+                        </div>
+                    </div>
+
+                    <div class="row" style="background-color:rgb(232, 232, 232); margin-left:0px;margin-right: 0px;">
+
+                        <div class="collapse" id="viewdetails21" style="background-color:rgb(232, 232, 232);">
+                            <div class="well" style="background-color:rgb(232, 232, 232);">
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr bgcolor="#FFFFFF">
+                                                <th bgcolor="#FFFFFF"><center>Wind</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Humidity</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Visibility</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Pressure</center></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>
+                                                    <center><p id="wind21"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="humidity21"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="visibility21"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="pressure21"></p></center>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="row hours" style="margin-left:0px;margin-right: 0px;padding-top:10px;padding-bottom:15px;">
+                        <div class="col-xs-2">
+                            <center><p id="time22"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><img id="image22" src="" width="50px" height="50px"></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center><p id="cloudcover22"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><p id="temperature22"></p></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center>
+                                <button class="btn btn-default" type="button" data-toggle="collapse" data-target="#viewdetails22" aria-expanded="false" aria-controls="viewdetails22" style="border: none;padding: 0;
+    background: none;">
+                                    <span class="glyphicon glyphicon-plus" aria-hidden="true" style="color:rgb(47, 112, 168);"></span>
+                                </button>
+
+                            </center>
+                        </div>
+                    </div>
+                    <div class="row" style="background-color:rgb(232, 232, 232); margin-left:0px;margin-right: 0px;">
+
+                        <div class="collapse" id="viewdetails22" style="background-color:rgb(232, 232, 232);">
+                            <div class="well" style="background-color:rgb(232, 232, 232);">
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr bgcolor="#FFFFFF">
+                                                <th bgcolor="#FFFFFF"><center>Wind</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Humidity</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Visibility</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Pressure</center></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>
+                                                    <center><p id="wind22"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="humidity22"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="visibility22"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="pressure22"></p></center>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="row hours" style="margin-left:0px;margin-right: 0px;padding-top:10px;padding-bottom:15px;">
+                        <div class="col-xs-2">
+                            <center><p id="time23"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><img id="image23" src="" width="50px" height="50px"></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center><p id="cloudcover23"></p></center>
+                        </div>
+                        <div class="col-xs-2">
+                            <center><p id="temperature23"></p></center>
+                        </div>
+                        <div class="col-xs-3">
+                            <center>
+                                <button class="btn btn-default" type="button" data-toggle="collapse" data-target="#viewdetails23" aria-expanded="false" aria-controls="viewdetails23" style="border: none;padding: 0;
+    background: none;">
+                                    <span class="glyphicon glyphicon-plus" aria-hidden="true" style="color:rgb(47, 112, 168);"></span>
+                                </button>
+
+                            </center>
+                        </div>
+                    </div>
+                    <div class="row" style="background-color:rgb(232, 232, 232); margin-left:0px;margin-right: 0px;">
+
+                        <div class="collapse" id="viewdetails23" style="background-color:rgb(232, 232, 232);">
+                            <div class="well" style="background-color:rgb(232, 232, 232);">
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr bgcolor="#FFFFFF">
+                                                <th bgcolor="#FFFFFF"><center>Wind</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Humidity</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Visibility</center></th>
+                                                <th bgcolor="#FFFFFF"><center>Pressure</center></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>
+                                                    <center><p id="wind23"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="humidity23"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="visibility23"></p></center>
+                                                </td>
+                                                <td>
+                                                    <center><p id="pressure23"></p></center>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+
+
+                </div>
+
+                <div id="nextweek" class="tab-pane fade" >
+
+                    <div class="row" style="background-color:rgb(47, 52, 57);margin-left:0px;margin-right: 0px;">
+                        <div class="col-md-2">
+                        </div>
+                        <div class="col-md-1" data-toggle="modal" data-target="#NextWeekModal1" style="margin:12px;padding:0px;background-color:rgb(53, 124, 180);color:white;font-weight:bold;border-radius: 5px;">
+                            <center><p id="nextday1"></p></center>
+                            <center><p id="nextdaydatemonth1"></p></center>
+                            <center> <img id="nextdayicon1" src="" width="50px" height="50px"></p></center>
+                            <center><p id="mintmp1" style="font-weight:normal">Min<br> Temp</p></center>
+                            <center><p id="mintmpvalue1" style="font-size:30px"></p></center>
+                            <center><p id="maxtmp1" style="font-weight:normal">Max<br>Temp</p></center>
+                            <center><p id="maxtmpvalue1" style="font-size:30px"></p></center>
+                        </div>
+                        <div id="NextWeekModal1" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="modallabel1" aria-hidden="true">
+                            <div class="modal-dialog" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;  </button>
+                                        <h4 class="modal-title" id="modallabel1" style="font-weight:bold;"></h4>
+                                    </div>
+                                    <div class="modal-body">
+
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <center><img id="nextdayiconmodal1" src="" width="150px" height="150px"></center>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <center><b><label id="nextdaymodal1" style="font-size:25px;"></label><label style="color:orange;font-size:25px;" id="nextdaymodalsummary1"></label></b>                      </center>
+                                            </div>
+                                        </div>
+
+
+
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Sunrise Time</b></p>
+                                                    <p id="sunrisemodal1"></p>
+                                                </center>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Sunset Time</b></p>
+                                                    <p id="sunsetmodal1"></p>
+                                                </center>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Humidity</b></p>
+                                                    <p id="humiditymodal1"></p>
+                                                </center>
+                                            </div>
+
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Wind Speed</b></p>
+                                                    <p id="windspeedmodal1"></p>
+                                                </center>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Visibility</b></p>
+                                                    <p id="visibilitymodal1"></p>
+                                                </center>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Pressure</b></p>
+                                                    <p id="pressuremodal1"></p>
+                                                </center>
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
+
+
+
+                        <div class="col-md-1" data-toggle="modal" data-target="#NextWeekModal2" style="margin:12px;padding:0px;background-color:rgb(235, 67, 67);color:white;font-weight:bold;border-radius: 5px;">
+                            <center><p id="nextday2"></p></center>
+                            <center><p id="nextdaydatemonth2"></p></center>
+                            <center> <img id="nextdayicon2" src="" width="50px" height="50px"></p></center>
+                            <center><p id="mintmp2" style="font-weight:normal">Min<br> Temp</p></center>
+                            <center><p id="mintmpvalue2" style="font-size:30px"></p></center>
+                            <center><p id="maxtmp2" style="font-weight:normal">Max<br> Temp</p></center>
+                            <center> <p id="maxtmpvalue2" style="font-size:30px"></center></p>
+                        </div>
+
+                        <div id="NextWeekModal2" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="modallabel2" aria-hidden="true">
+                            <div class="modal-dialog" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;  </button>
+                                        <h4 class="modal-title" id="modallabel2" style="font-weight:bold;"></h4>
+                                    </div>
+                                    <div class="modal-body">
+
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <center><img id="nextdayiconmodal2" src="" width="150px" height="150px"></center>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <center><b><label id="nextdaymodal2" style="font-size:25px;"></label><label style="color:orange;font-size:25px;" id="nextdaymodalsummary2"></label></b>                      </center>
+                                            </div>
+                                        </div>
+
+
+
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Sunrise Time</b></p>
+                                                    <p id="sunrisemodal2"></p>
+                                                </center>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Sunset Time</b></p>
+                                                    <p id="sunsetmodal2"></p>
+                                                </center>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Humidity</b></p>
+                                                    <p id="humiditymodal2"></p>
+                                                </center>
+                                            </div>
+
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Wind Speed</b></p>
+                                                    <p id="windspeedmodal2"></p>
+                                                </center>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Visibility</b></p>
+                                                    <p id="visibilitymodal2"></p>
+                                                </center>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Pressure</b></p>
+                                                    <p id="pressuremodal2"></p>
+                                                </center>
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
+
+
+                        <div class="col-md-1" data-toggle="modal" data-target="#NextWeekModal3" style="margin:12px;padding:0px;background-color:rgb(230, 142, 79);color:white;font-weight:bold;border-radius: 5px;">
+                            <center> <p id="nextday3"></p></center>
+                            <center>   <p id="nextdaydatemonth3"></p></center>
+                            <center><img id="nextdayicon3" src="" width="50px" height="50px"></p></center>
+                            <center><p id="mintmp3" style="font-weight:normal">Min<br> Temp</p></center>
+                            <center><p id="mintmpvalue3" style="font-size:30px"></p></center>
+                            <center><p id="maxtmp3" style="font-weight:normal">Max <br>Temp</p></center>
+                            <center><p id="maxtmpvalue3" style="font-size:30px"></p></center>
+
+                        </div>
+
+
+                        <div id="NextWeekModal3" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="modallabel3" aria-hidden="true">
+                            <div class="modal-dialog" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;  </button>
+                                        <h4 class="modal-title" id="modallabel3" style="font-weight:bold;"></h4>
+                                    </div>
+                                    <div class="modal-body">
+
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <center><img id="nextdayiconmodal3" src="" width="150px" height="150px"></center>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <center><b><label id="nextdaymodal3" style="font-size:25px;"></label><label style="font-size:25px;color:orange;" id="nextdaymodalsummary3"></label></b>                      </center>
+                                            </div>
+                                        </div>
+
+
+
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Sunrise Time</b></p>
+                                                    <p id="sunrisemodal3"></p>
+                                                </center>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Sunset Time</b></p>
+                                                    <p id="sunsetmodal3"></p>
+                                                </center>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Humidity</b></p>
+                                                    <p id="humiditymodal3"></p>
+                                                </center>
+                                            </div>
+
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Wind Speed</b></p>
+                                                    <p id="windspeedmodal3"></p>
+                                                </center>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Visibility</b></p>
+                                                    <p id="visibilitymodal3"></p>
+                                                </center>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Pressure</b></p>
+                                                    <p id="pressuremodal3"></p>
+                                                </center>
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
+
+                        <div class="col-md-1" data-toggle="modal" data-target="#NextWeekModal4" style="margin:12px;padding:0px;background-color:rgb(164, 167, 57);color:white;font-weight:bold;border-radius: 5px;">
+                            <center><p id="nextday4"></p></center>
+                            <center> <p id="nextdaydatemonth4"></p></center>
+                            <center> <img id="nextdayicon4" src="" width="50px" height="50px"></p></center>
+                            <center><p id="mintmp4" style="font-weight:normal">Min <br>Temp</p></center>
+                            <center><p id="mintmpvalue4" style="font-size:30px"></p></center>
+                            <center><p id="maxtmp4" style="font-weight:normal">Max<br> Temp</p></center>
+                            <center><p id="maxtmpvalue4" style="font-size:30px"></p></center>
+                        </div>
+
+
+
+                        <div id="NextWeekModal4" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="modallabel4" aria-hidden="true">
+                            <div class="modal-dialog" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;  </button>
+                                        <h4 class="modal-title" id="modallabel4" style="font-weight:bold;"></h4>
+                                    </div>
+                                    <div class="modal-body">
+
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <center><img id="nextdayiconmodal4" src="" width="150px" height="150px"></center>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <center><b><label id="nextdaymodal4" style="font-size:25px;"></label><label style="font-size:25px;color:orange;" id="nextdaymodalsummary4"></label></b>                      </center>
+                                            </div>
+                                        </div>
+
+
+
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Sunrise Time</b></p>
+                                                    <p id="sunrisemodal4"></p>
+                                                </center>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Sunset Time</b></p>
+                                                    <p id="sunsetmodal4"></p>
+                                                </center>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Humidity</b></p>
+                                                    <p id="humiditymodal4"></p>
+                                                </center>
+                                            </div>
+
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Wind Speed</b></p>
+                                                    <p id="windspeedmodal4"></p>
+                                                </center>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Visibility</b></p>
+                                                    <p id="visibilitymodal4"></p>
+                                                </center>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Pressure</b></p>
+                                                    <p id="pressuremodal4"></p>
+                                                </center>
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <div class="col-md-1" data-toggle="modal" data-target="#NextWeekModal5" style="margin:12px;padding:0px;background-color:rgb(151, 112, 167);color:white;font-weight:bold;border-radius: 5px;">
+                            <center><p id="nextday5"></p></center>
+                            <center><p id="nextdaydatemonth5"></p></center>
+                            <center><img id="nextdayicon5" src="" width="50px" height="50px"></p></center>
+                            <center><p id="mintmp5" style="font-weight:normal">Min<br> Temp</p></center>
+                            <center> <p id="mintmpvalue5" style="font-size:30px"></p></center>
+                            <center><p id="maxtmp5" style="font-weight:normal">Max<br> Temp</p></center>
+                            <center><p id="maxtmpvalue5" style="font-size:30px"></center></p>
+                        </div>
+
+                        <div id="NextWeekModal5" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="modallabel5" aria-hidden="true">
+                            <div class="modal-dialog" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;  </button>
+                                        <h4 class="modal-title" id="modallabel5" style="font-weight:bold;"></h4>
+                                    </div>
+                                    <div class="modal-body">
+
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <center><img id="nextdayiconmodal5" src="" width="150px" height="150px"></center>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <center><b><label id="nextdaymodal5" style="font-size:25px;"></label><label style="font-size:25px;color:orange;" id="nextdaymodalsummary5"></label></b>                      </center>
+                                            </div>
+                                        </div>
+
+
+
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Sunrise Time</b></p>
+                                                    <p id="sunrisemodal5"></p>
+                                                </center>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Sunset Time</b></p>
+                                                    <p id="sunsetmodal5"></p>
+                                                </center>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Humidity</b></p>
+                                                    <p id="humiditymodal5"></p>
+                                                </center>
+                                            </div>
+
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Wind Speed</b></p>
+                                                    <p id="windspeedmodal5"></p>
+                                                </center>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Visibility</b></p>
+                                                    <p id="visibilitymodal5"></p>
+                                                </center>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Pressure</b></p>
+                                                    <p id="pressuremodal5"></p>
+                                                </center>
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
+
+                        <div class="col-md-1" data-toggle="modal" data-target="#NextWeekModal6" style="margin:12px;padding:0px;background-color:rgb(241, 123, 125);color:white;font-weight:bold;border-radius: 5px;">
+                            <center><p id="nextday6"></p></center>
+                            <center><p id="nextdaydatemonth6"></p>   </center> 
+                            <center><img id="nextdayicon6" src="" width="50px" height="50px"></p></center>
+                            <center><p id="mintmp6" style="font-weight:normal">Min<br> Temp</p></center>
+                            <center><p id="mintmpvalue6" style="font-size:30px"></p></center>
+                            <center><p id="maxtmp6" style="font-weight:normal">Max <br>Temp</p></center>
+                            <center><p id="maxtmpvalue6" style="font-size:30px"></p></center>
+                        </div>
+
+                        <div id="NextWeekModal6" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="modallabel6" aria-hidden="true">
+                            <div class="modal-dialog" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;  </button>
+                                        <h4 class="modal-title" id="modallabel6" style="font-weight:bold;"></h4>
+                                    </div>
+                                    <div class="modal-body">
+
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <center><img id="nextdayiconmodal6" src="" width="150px" height="150px"></center>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <center><b><label id="nextdaymodal6" style="font-size:25px;"></label><label style="font-size:25px;color:orange;" id="nextdaymodalsummary6"></label></b>                      </center>
+                                            </div>
+                                        </div>
+
+
+
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Sunrise Time</b></p>
+                                                    <p id="sunrisemodal6"></p>
+                                                </center>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Sunset Time</b></p>
+                                                    <p id="sunsetmodal6"></p>
+                                                </center>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Humidity</b></p>
+                                                    <p id="humiditymodal6"></p>
+                                                </center>
+                                            </div>
+
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Wind Speed</b></p>
+                                                    <p id="windspeedmodal6"></p>
+                                                </center>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Visibility</b></p>
+                                                    <p id="visibilitymodal6"></p>
+                                                </center>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Pressure</b></p>
+                                                    <p id="pressuremodal6"></p>
+                                                </center>
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
+
+                        <div class="col-md-1" data-toggle="modal" data-target="#NextWeekModal7" style="margin:12px;padding:0px;background-color:rgb(206, 69, 113);color:white;font-weight:bold;border-radius: 5px;">
+                            <center><p id="nextday7"></p></center>
+                            <center> <p id="nextdaydatemonth7"></p></center>
+                            <center><img id="nextdayicon7" src="" width="50px" height="50px"></p></center>
+                            <center><p id="mintmp7" style="font-weight:normal">Min<br> Temp</p></center>
+                            <center><p id="mintmpvalue7" style="font-size:30px"></p></center>
+                            <center><p id="maxtmp7" style="font-weight:normal">Max <br>Temp</p></center>
+                            <center><p id="maxtmpvalue7" style="font-size:30px"></p></center>
+                        </div>
+                        <div id="NextWeekModal7" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="modallabel7" aria-hidden="true">
+                            <div class="modal-dialog" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;  </button>
+                                        <h4 class="modal-title" id="modallabel7" style="font-weight:bold;"></h4>
+                                    </div>
+                                    <div class="modal-body">
+
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <center><img id="nextdayiconmodal7" src="" width="150px" height="150px"></center>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <center><b><label id="nextdaymodal7" style="font-size:25px;"></label><label style="font-size:25px;color:orange;" id="nextdaymodalsummary7"></label></b>                      </center>
+                                            </div>
+                                        </div>
+
+
+
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Sunrise Time</b></p>
+                                                    <p id="sunrisemodal7"></p>
+                                                </center>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Sunset Time</b></p>
+                                                    <p id="sunsetmodal7"></p>
+                                                </center>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Humidity</b></p>
+                                                    <p id="humiditymodal7"></p>
+                                                </center>
+                                            </div>
+
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Wind Speed</b></p>
+                                                    <p id="windspeedmodal7"></p>
+                                                </center>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Visibility</b></p>
+                                                    <p id="visibilitymodal7"></p>
+                                                </center>
+                                            </div>
+
+                                            <div class="col-md-4">
+                                                <center>
+                                                    <p style="font-size:16px;"><b>Pressure</b></p>
+                                                    <p id="pressuremodal7"></p>
+                                                </center>
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
+
+
+
+                        <div class="col-md-2">
+                        </div>
+
+
+
+
+
+
+                    </div>
+
+
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <noscript>
+</body>
+
+</html>
